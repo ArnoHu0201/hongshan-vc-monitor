@@ -14,3 +14,4 @@ output/*.html
 output/*.json
 !output/sent_records.json
 !output/company_detail_cache.json
+!output/last_daily_run.json
