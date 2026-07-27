@@ -4,6 +4,7 @@
 """
 
 import sys
+import json
 import logging
 from datetime import datetime
 
@@ -28,6 +29,19 @@ def run_daily():
     无增量时发送"无新增事件"通知。
     """
     logger.info("===== 开始日报模式（增量推送） =====")
+
+    # 防重复发送：检查今天是否已有发送记录
+    from config import OUTPUT_DIR
+    last_run_file = OUTPUT_DIR / "last_daily_run.json"
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    if last_run_file.exists():
+        try:
+            last_run_data = json.loads(last_run_file.read_text(encoding="utf-8"))
+            if last_run_data.get("date") == today_str and last_run_data.get("sent"):
+                logger.info(f"今天 ({today_str}) 已发送过日报，跳过发送。如需重发请删除 {last_run_file}")
+                return None
+        except Exception:
+            pass
 
     session = get_session()
     all_events = scrape_all(session)
@@ -76,6 +90,14 @@ def run_daily():
     send_result = send_email_smtp(subject, html)
     if not send_result:
         logger.warning("SMTP 发送失败（可能授权码未设置），邮件已保存为本地文件")
+    else:
+        # 标记今天已发送
+        last_run_file = OUTPUT_DIR / "last_daily_run.json"
+        last_run_file.write_text(
+            json.dumps({"date": today_str, "sent": True, "time": datetime.now().isoformat()}, ensure_ascii=False),
+            encoding="utf-8"
+        )
+        logger.info(f"已标记今天 ({today_str}) 日报已发送")
 
     logger.info(f"日报完成: {html_file}")
     logger.info("===== 日报模式结束 =====")
