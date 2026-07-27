@@ -1,0 +1,60 @@
+name: HongShan Daily Report
+
+on:
+  # 每个工作日早上8点 CST (UTC+8) = 0:00 UTC
+  schedule:
+    - cron: '0 0 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Run mode'
+        required: true
+        default: 'daily'
+        type: choice
+        options:
+          - daily
+          - weekly
+          - full
+
+jobs:
+  run-daily:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install dependencies
+        run: pip install requests beautifulsoup4 lxml pandas
+
+      - name: Ensure output directory
+        run: mkdir -p output
+
+      - name: Run daily report
+        env:
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          SMTP_SENDER: system@cardatatool.com
+          EMAIL_TO: rzwei@che300.com
+          EMAIL_CC: tshu@che300.com
+        run: |
+          cd scripts
+          python main.py daily
+
+      - name: Commit sent_records for next run
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+          if [ -f output/sent_records.json ]; then
+            git add output/sent_records.json output/company_detail_cache.json
+            git diff --staged --quiet || git commit -m "Update sent_records [daily] $(date +%Y%m%d)" && git push
+          fi
+
+      - name: Upload report artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-report-${{ github.run_number }}
+          path: output/
