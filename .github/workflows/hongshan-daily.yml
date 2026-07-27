@@ -19,6 +19,8 @@ on:
 jobs:
   run-daily:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -44,12 +46,14 @@ jobs:
           python main.py daily
 
       - name: Commit sent_records for next run
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
           if [ -f output/sent_records.json ]; then
             git add output/sent_records.json output/company_detail_cache.json
-            git diff --staged --quiet || git commit -m "Update sent_records [daily] $(date +%Y%m%d)" && git push
+            git diff --staged --quiet || (git commit -m "Update sent_records [daily] $(date +%Y%m%d)" && git push origin main)
           fi
 
       - name: Upload report artifacts

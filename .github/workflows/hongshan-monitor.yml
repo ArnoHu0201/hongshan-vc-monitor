@@ -1,0 +1,23 @@
+name: HongShan Report Monitor
+
+on:
+  workflow_run:
+    workflows: ["HongShan Daily Report", "HongShan Weekly Report"]
+    types:
+      - completed
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check run conclusion
+        run: |
+          CONCLUSION="${{ github.event.workflow_run.conclusion }}"
+          WORKFLOW="${{ github.event.workflow_run.name }}"
+          RUN_ID="${{ github.event.workflow_run.id }}"
+          echo "Workflow: $WORKFLOW"
+          echo "Conclusion: $CONCLUSION"
+          echo "Run ID: $RUN_ID"
+          if [ "$CONCLUSION" = "failure" ]; then
+            echo "::error::$WORKFLOW 执行失败，请检查：https://github.com/${{ github.repository }}/actions/runs/$RUN_ID"
+          fi
