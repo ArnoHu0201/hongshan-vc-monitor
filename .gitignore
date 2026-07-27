@@ -1,5 +1,4 @@
 .env
-output/
 .venv/
 __pycache__/
 *.pyc
@@ -11,3 +10,7 @@ dist/
 build/
 .idea/
 .vscode/
+output/*.html
+output/*.json
+!output/sent_records.json
+!output/company_detail_cache.json
