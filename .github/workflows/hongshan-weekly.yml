@@ -1,7 +1,6 @@
 name: HongShan Weekly Report
 
 on:
-  # 每周一早上8点 CST (UTC+8) = 0:00 UTC
   schedule:
     - cron: '0 0 * * 1'
   workflow_dispatch:
@@ -22,25 +21,11 @@ jobs:
       - name: Install dependencies
         run: pip install requests beautifulsoup4 lxml pandas
 
-      - name: Ensure output directory
-        run: mkdir -p output
-
       - name: Download sent_records from previous run
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          curl -s -H "Authorization: token $GITHUB_TOKEN" \
-            "https://api.github.com/repos/${{ github.repository }}/contents/output/sent_records.json" \
-            | python3 -c "
-import sys,json,base64
-content=json.load(sys.stdin)
-if 'content' in content:
-    with open('output/sent_records.json','w') as f:
-        f.write(base64.b64decode(content['content']).decode())
-    print('sent_records.json 已下载')
-else:
-    print('sent_records.json 不存在，使用空文件')
-" || echo '下载失败，使用空文件'
+          python3 scripts/download_sent_records.py
 
       - name: Run weekly report
         env:
@@ -51,13 +36,6 @@ else:
         run: |
           cd scripts
           python main.py weekly
-
-      - name: Upload sent_records as artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: sent-records-${{ github.run_number }}
-          path: output/sent_records.json
 
       - name: Commit sent_records to repo
         env:
